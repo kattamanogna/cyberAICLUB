@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Cyber Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #f4f4f4;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .navbar {
+      background-color: #343a40;
+    }
+    .navbar-brand, .toggle-dark {
+      color: white;
+    }
+    .dashboard-content {
+      margin-top: 20px;
+    }
+    .dark-mode {
+      background-color: #1e1e1e;
+      color: #f1f1f1;
+    }
+    .dark-mode .card {
+      background-color: #333;
+      color: white;
+    }
+      body.dark-mode {
+    background-color: #121212;
+    color: white;
+  }
+  </style>
+
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">AI Cyber Dashboard</a>
+    <button class="btn btn-outline-light ms-auto toggle-dark">Toggle Dark Mode</button>
+  </div>
+</nav>
+
+<!-- Dashboard Content -->
+<div class="container dashboard-content">
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card text-white bg-primary mb-3">
+        <div class="card-header">Total Threats Detected</div>
+        <div class="card-body">
+          <h2 id="threat-count">0</h2>
+        </div>
+      </div>
+      <div class="card mb-3">
+        <div class="card-header">Threat Distribution</div>
+        <div class="card-body">
+          <canvas id="threatPieChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card mb-3">
+        <div class="card-header">Threats Over Time</div>
+        <div class="card-body">
+          <canvas id="threatChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pieChart, threatChart;
+  const ctxLine = document.getElementById('threatChart').getContext('2d');
+  const ctxPie = document.getElementById('threatPieChart').getContext('2d');
+
+  const pieColors = ['#ff6384', '#36a2eb', '#ffce56'];
+
+  threatChart = new Chart(ctxLine, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Threats Detected',
+        data: [],
+        borderColor: 'red',
+        fill: false
+      }]
+    }
+  });
+
+  pieChart = new Chart(ctxPie, {
+    type: 'pie',
+    data: {
+      labels: ['DDoS', 'Phishing', 'Malware'],
+      datasets: [{
+        label: 'Threat Types',
+        data: [10, 20, 30],
+        backgroundColor: pieColors
+      }]
+    }
+  });
+
+  function updateCharts(data) {
+    const now = new Date().toLocaleTimeString();
+    threatChart.data.labels.push(now);
+    threatChart.data.datasets[0].data.push(data.threat_count);
+
+    if (threatChart.data.labels.length > 10) {
+      threatChart.data.labels.shift();
+      threatChart.data.datasets[0].data.shift();
+    }
+
+    pieChart.data.datasets[0].data = [
+      data.threat_types.DDoS,
+      data.threat_types.Phishing,
+      data.threat_types.Malware
+    ];
+
+    document.getElementById('threat-count').innerText = data.threat_count;
+
+    threatChart.update();
+    pieChart.update();
+  }
+
+  async function fetchThreatData() {
+    const response = await fetch('/api/threats');
+    const data = await response.json();
+    updateCharts(data);
+  }
+
+  // Fetch data every 5 seconds
+  setInterval(fetchThreatData, 5000);
+  fetchThreatData(); // Initial call
+
+  // Dark Mode Toggle
+  document.querySelector('.toggle-dark').addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+  });
+</script>
+<script>
+  function toggleMode() {
+    document.body.classList.toggle("dark-mode");
+    localStorage.setItem("theme", document.body.classList.contains("dark-mode") ? "dark" : "light");
+  }
+
+  window.onload = function () {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      document.body.classList.add("dark-mode");
+    }
+  }
+  function filterData() {
+  const range = document.getElementById('filterRange').value;
+  const now = new Date();
+
+  const filtered = rawData.filter(data => {
+    const time = new Date(data.timestamp);
+    if (range === "1h") return now - time <= 3600000;
+    if (range === "24h") return now - time <= 86400000;
+    return true;
+  });
+
+  updateChart(filtered);
+}
+
+</script>
+<!--<select id="filterRange" onchange="filterData()">-->
+<!--  <option value="all">All</option>-->
+<!--  <option value="1h">Last 1 Hour</option>-->
+<!--  <option value="24h">Last 24 Hours</option>-->
+<!--</select>-->
+
+</body>
+</html>
